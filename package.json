@@ -1,0 +1,33 @@
+{
+  "name": "testdeliverd",
+  "version": "1.0.0",
+  "description": "Tests and showcases the Deliverd TypeScript SDK",
+  "scripts": {
+    "demo": "tsx src/demo.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Naish-OL/TestDeliverd.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Naish-OL/TestDeliverd/issues"
+  },
+  "homepage": "https://github.com/Naish-OL/TestDeliverd#readme",
+  "dependencies": {
+    "@deliverd/sdk": "^0.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  }
+}
