@@ -4,7 +4,7 @@ A TypeScript app that tests and showcases the [Deliverd](https://deliverd.dev) S
 
 Deliverd lets an agent ask a person for an approval, review, answer or decision, then carry on based on what they said. It also lets agents publish reports to a secure, persistent address. Each demo in this repo exercises one SDK capability in a small, readable script.
 
-> **Status:** early. `approve` is built; the other demos are planned.
+> **Status:** all demos built and tested in development mode. Not yet run against a live organisation.
 
 ## Prerequisites
 
@@ -47,21 +47,23 @@ Personal keys carry every scope your role has. Agent keys (Admin → Agents) are
 
 ## Demos
 
-| Demo | SDK feature | Dev mode | Notes |
-|---|---|---|---|
-| `approve` ✅ | `deliverd.approve()` | Yes | Try `approved`, `rejected`, `timeout`, `question` |
-| `approve-with-changes` | `editableFields`, `decision.input`, `decision.changes` | Yes | Always act on `decision.input` |
-| `confirm` | `deliverd.confirm()` | Yes | Returns a boolean |
-| `collect` | `deliverd.collect()`: typed questions | Yes | Check `complete` before reading `answers` |
-| `review` | `deliverd.review()` of a published report | Yes | Live: needs a published report's `reportId` |
-| `flow` | `deliverd.flows.resume()`: group requests and get an evidence pack | Yes | |
-| `gate` | `deliverd.gate()` against a registered action | No (501) | Registering actions needs an owner/admin key. Gate rules apply only on Business and Enterprise plans; otherwise every gated action goes to a person |
-| `publish` | `deliverd.publish()`, `reports.versions()`, `reports.update()` | No (501) | HTML up to 2 MB inline |
-| `webhook-receiver` | `constructEvent()` / `constructCallback()` | Partly | Signature checks run locally; real deliveries need a public HTTPS URL (use a tunnel) |
-| `adapters` | `@deliverd/sdk/adapters`: Claude Agent SDK, AI SDK, OpenAI Agents SDK, LangGraph | Yes | |
-| `errors` | `DeliverdError`, `DeliverdTimeoutError`, retries | Yes | Branch on `error.code` |
+Run any of these with `npm run demo <name>`. "Outcomes" are the `DELIVERD_DEV_OUTCOME` values worth trying.
 
-Development mode simulates approvals, reviews, collections, flows and tasks. Other calls return `501 not_in_development_mode`.
+| Demo | Shows | Dev mode | Outcomes | Live needs |
+|---|---|---|---|---|
+| `approve` | `deliverd.approve()`, `onQuestion`, timeouts | Yes | `approved` `rejected` `question` `timeout` | An approver who isn't the key's owner |
+| `approve-with-changes` | `editableFields`, acting on `decision.input`, `decision.changes` | Yes | `approved` `rejected` | Same |
+| `confirm` | `deliverd.confirm()`: a quick yes/no | Yes | `approved` `rejected` | Same |
+| `collect` | `deliverd.collect()`: typed questions, checking `complete` | Yes | `approved` `rejected` `timeout` | Named respondents (`DEMO_APPROVER`) |
+| `review` | `deliverd.review()`: verdicts and comment threads | Yes | `approved` `rejected` | `DEMO_REPORT_ID` from the `publish` demo |
+| `flow` | `flows.resume()`, `flow.collect/approve/close/cancel`, evidence pack | Yes | `approved` `rejected` | The evidence pack is empty in dev mode |
+| `gate` | `deliverd.gate()`: policy decides, or a person | Yes | `approved` `denied` `rejected` | `demo.refund` registered with an owner/admin key (the definition is in the demo) |
+| `publish` | `deliverd.publish()`, `reports.versions()`, `reports.update()` with `expectedVersion` | No (501) | n/a | A live key. Publishes `testdeliverd/demo` |
+| `webhook-receiver` | `constructEvent()`: valid, duplicate, tampered, wrong-secret and replayed deliveries | Offline | n/a | `PORT` set, a public HTTPS tunnel and `DELIVERD_WEBHOOK_SECRET` |
+| `adapters` | `deliverdCanUseTool` for the Claude Agent SDK, called as the Agent SDK would | Yes | `approved` `rejected` | Same as `approve` |
+| `errors` | `DeliverdError` codes and flags, `DeliverdTimeoutError`, rejection isn't an error | Offline | n/a | Nothing |
+
+Development mode simulates approvals, reviews, collections, flows, tasks and the gate. Publishing and the rest of the API return `501 not_in_development_mode`. It doesn't validate gate input against the action's schema.
 
 ## Scripts
 
@@ -69,7 +71,7 @@ Development mode simulates approvals, reviews, collections, flows and tasks. Oth
 |---|---|
 | `npm run demo <name>` | Run a demo with `tsx` |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | `vitest` |
+| `npm test` | `vitest`: runs every demo in development mode and checks its output |
 
 ## Layout
 
@@ -78,6 +80,8 @@ src/
   demo.ts          loads .env, then runs src/demos/<name>.ts
   client.ts        shared Deliverd client setup
   demos/<name>.ts  one self-contained demo per SDK feature
+test/
+  demos.test.ts    smoke tests for every demo (development mode only)
 docs/
   sdk-notes.md     condensed SDK reference (with a last-checked date)
 .env.example       environment variables
@@ -94,6 +98,7 @@ CLAUDE.md          instructions for Claude Code
 | `DELIVERD_BASE_URL` | SDK address for non-hosted deployments |
 | `DELIVERD_WEBHOOK_SECRET` | Webhook signing secret (this repo's name; the SDK doesn't define one) |
 | `DEMO_APPROVER` | Who live demos ask (this repo's name). Unset means your organisation's owners and admins |
+| `DEMO_REPORT_ID` | The report the live `review` demo asks about (printed by the `publish` demo) |
 
 Comment out variables you don't use rather than leaving them blank: the SDK treats an empty value as set.
 

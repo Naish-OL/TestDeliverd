@@ -20,7 +20,7 @@ Condensed from https://deliverd.dev/docs/developers and its subpages. **Last che
 | `DELIVERD_DEV_OUTCOME` | `approved` (default), `rejected`, `denied`, `timeout`, `question`. `denied` is for the gate; on an approval it acts as `rejected` |
 | `DELIVERD_URL`, `DELIVERD_TOKEN` | CLI only |
 
-Development mode (checked in SDK 0.25.0 source) simulates approvals, reviews, collections, flows and tasks. Every other call, including gate and publish, fails with `501 not_in_development_mode`. Options: `outcome` (or a function of the request), `delay`, `note`, `edits` (the approver's corrections, for approve-with-changes), `question`, `log`.
+Development mode (checked in SDK 0.25.0 source) simulates approvals, reviews, collections, flows, tasks and the gate. Everything else, including publish and reports, fails with `501 not_in_development_mode`. Gate outcomes: `denied` settles instantly as a rule refusal; `approved` and `rejected` go through `pending` to a person. The simulated gate doesn't validate input against a schema, and `externalId` reuse works within one process. Flow evidence packs come back empty. Options: `outcome` (or a function of the request), `delay`, `note`, `edits` (the approver's corrections, for approve-with-changes), `question`, `log`.
 
 **Don't leave optional variables blank.** The SDK uses `??`, so `DELIVERD_BASE_URL=` gives an empty base URL (`Invalid URL`) and `DELIVERD_DEV_OUTCOME=` gives the outcome `""`. Comment unused lines out instead.
 
@@ -35,7 +35,7 @@ Statuses: `pending`, `approved`, `rejected`, `changes_requested`, `expired`, `ca
 ## Other calls
 
 - `review({ title, reportId, instructions, reviewers })` returns `approved`, `verdicts`, and comment-thread counts. Statuses: `approved`, `changes_requested`, `expired`, `cancelled`.
-- `collect({ title, questions: [{ prompt, kind, options?, required? }], respondents })` returns `complete` and `answers` (keyed by prompt). Kinds: `text`, `long_text`, `number`, `date`, `choice`, `multi_choice`, `boolean`. Limits: ≤40 questions, ≤50 respondents.
+- `collect({ title, instructions?, questions: [{ prompt, kind, options?, required? }], respondents })` returns `complete` and `answers` (keyed by prompt). Kinds: `text`, `long_text`, `number`, `date`, `choice`, `multi_choice`, `boolean`. Limits: ≤40 questions, ≤50 respondents.
 - `confirm({ title, ... })` returns a boolean.
 - `gate({ action, externalId, input, wait? })` returns `allowed`, `status`, `canExecute`, `input`, `reason`, `rule`, `basis`, `approvalUrl`, `changes`.
   - Statuses: `allowed`, `denied`, `pending`, `approved`, `rejected`, `expired`, `cancelled`, `changes_requested` (resubmit with `supersedesGateId`), `revoked`, `used`.
@@ -72,3 +72,11 @@ Statuses: `pending`, `approved`, `rejected`, `changes_requested`, `expired`, `ca
 ## Scopes
 
 `approvals:*`, `reviews:*`, `collections:*`, `flows:*`, `tasks:*`, `gates:read|write|execute`, `reports:read|write|share`, `actions:*`, `policies:*`, `webhooks:manage`, `comments:*`, `schedules:*`, `audiences:read`, `workspaces:read`, `agents:read`. Agent keys can't hold `actions:*`, `policies:*`, `webhooks:manage` or `schedules:write`.
+
+## Adapters (checked in 0.25.0)
+
+`deliverdCanUseTool({ deliverd, approvers?, when?(tool, input), describe?, editable?(tool, input), expiresIn? (default 1h), timeout?, flowId? })` returns `(toolName, input, { signal, toolUseID }) => { behavior: "allow", updatedInput } | { behavior: "deny", message }`. Calls not matched by `when` are allowed unchanged. A refusal is a deny with a message telling the model not to retry, never a throw. The others: `deliverdToolApproval` (AI SDK), `runWithDeliverdApprovals` / `resolveInterruptions` (OpenAI Agents), `approveInGraph` / `resumeFromCallback` (LangGraph). Adapters match each framework by type shape, so they need no extra dependencies.
+
+## Webhook verification details
+
+`constructEvent` throws the same "signature did not verify" message for a tampered body, a wrong secret and an expired timestamp. Header constants: `SIGNATURE_HEADER`, `EVENT_HEADER`, `DELIVERY_HEADER` (lowercase). `verifySignature(secret, body, header)` returns a boolean instead of throwing.
