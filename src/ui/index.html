@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TestDeliverd</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --panel-2: #f1f3f6; --line: #e2e5ea;
+    --text: #1b1f24; --muted: #5f6873; --faint: #8a929c;
+    --accent: #3b5bdb; --accent-soft: #e8edfd; --accent-text: #ffffff;
+    --pass: #2b8a3e; --pass-soft: #e6f4ea; --fail: #c92a2a; --fail-soft: #fdecec;
+    --run: #1971c2; --run-soft: #e7f1fb;
+    --live: #c2410c; --live-soft: #fff1e6; --live-line: #f5c9a8;
+    --console-bg: #14171c; --console-text: #d7dce2; --console-faint: #7d8590;
+    --mark: #ffe066; --mark-text: #1b1f24;
+    --radius: 10px;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --panel: #171a20; --panel-2: #1e222a; --line: #2a2f38;
+      --text: #e6e9ee; --muted: #a0a8b3; --faint: #6e7681;
+      --accent: #7b93f5; --accent-soft: #1e2540; --accent-text: #0f1115;
+      --pass: #51cf66; --pass-soft: #15291b; --fail: #ff6b6b; --fail-soft: #331a1a;
+      --run: #4dabf7; --run-soft: #12263a;
+      --live: #fd8c4e; --live-soft: #2e1c10; --live-line: #5c3416;
+      --console-bg: #0a0c0f; --mark: #ffd43b;
+      color-scheme: dark;
+    }
+  }
+  /* Live mode re-colours the accent everywhere, so it can't be missed. */
+  body.live { --accent: var(--live); --accent-soft: var(--live-soft); }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: .5; }
+  code { font-family: var(--mono); font-size: .92em; }
+
+  header {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+    border-top: 4px solid var(--accent);
+  }
+  .bar {
+    max-width: 1280px; margin: 0 auto; padding: 12px 20px;
+    display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center;
+  }
+  .brand { font-weight: 650; font-size: 16px; }
+  .brand small { font-weight: 400; color: var(--faint); margin-left: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-right: auto; }
+  .chip {
+    font-size: 12px; padding: 2px 8px; border-radius: 99px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
+  }
+  .chip.ok { color: var(--pass); }
+  .chip.warn { color: var(--live); }
+
+  .mode { display: flex; align-items: center; gap: 10px; }
+  .mode-label { color: var(--muted); font-size: 13px; }
+  .segmented { display: inline-flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  .segmented button {
+    border: 0; background: transparent; padding: 5px 14px; border-radius: 6px; font-weight: 550; color: var(--muted);
+  }
+  .segmented button[aria-pressed="true"] { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+  .segmented button.live[aria-pressed="true"] { background: var(--live); color: #fff; }
+
+  .banner {
+    background: var(--live-soft); border-bottom: 1px solid var(--live-line); color: var(--text);
+  }
+  .banner .bar { padding-block: 10px; display: block; font-size: 13px; }
+  .banner strong { color: var(--live); }
+
+  nav.tabs { max-width: 1280px; margin: 0 auto; padding: 0 20px; display: flex; gap: 4px; }
+  nav.tabs button {
+    border: 0; background: none; padding: 10px 12px; color: var(--muted); font-weight: 550;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  nav.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  nav.tabs .count { font-weight: 400; color: var(--faint); margin-left: 4px; }
+
+  main { max-width: 1280px; margin: 0 auto; padding: 20px; }
+
+  /* Demos tab */
+  .demos { display: grid; grid-template-columns: minmax(240px, 300px) 1fr; gap: 20px; align-items: start; }
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .item {
+    text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: var(--radius);
+    padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px;
+  }
+  .item:hover { border-color: var(--faint); }
+  .item[aria-current="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .item .name { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .item .title { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; align-self: center; white-space: nowrap; }
+  .badge.yes { background: var(--pass-soft); color: var(--pass); }
+  .badge.offline { background: var(--panel-2); color: var(--muted); }
+  .badge.no { background: var(--live-soft); color: var(--live); }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+  .panel h2 { margin: 0; font-size: 18px; }
+  .panel h2 code { font-size: 15px; color: var(--muted); font-weight: 500; margin-left: 8px; }
+  .shows { margin: 4px 0 14px; color: var(--muted); }
+  dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0 0 16px; font-size: 13px; }
+  dl.facts dt { color: var(--faint); }
+  dl.facts dd { margin: 0; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .controls .label { color: var(--faint); font-size: 13px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    border: 1px solid var(--line); background: var(--panel-2); padding: 4px 10px; border-radius: 99px;
+    font-family: var(--mono); font-size: 12px;
+  }
+  .pill[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .spacer { flex: 1; }
+  .btn {
+    border: 1px solid var(--line); background: var(--panel); padding: 7px 14px; border-radius: 8px; font-weight: 550;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  body.live .btn.primary { color: #fff; }
+  .btn.armed { background: var(--fail); border-color: var(--fail); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+  .note.warn { color: var(--live); }
+
+  .console {
+    background: var(--console-bg); color: var(--console-text); border-radius: 8px;
+    font: 12.5px/1.55 var(--mono); padding: 14px; margin: 0; min-height: 220px; max-height: 60vh;
+    overflow: auto; white-space: pre-wrap; word-break: break-word;
+  }
+  .console .faint { color: var(--console-faint); }
+  .console mark { background: var(--mark); color: var(--mark-text); border-radius: 2px; }
+  .status-line { display: flex; gap: 12px; font-size: 13px; margin-top: 8px; color: var(--muted); min-height: 20px; }
+  .ok { color: var(--pass); } .bad { color: var(--fail); } .running { color: var(--run); }
+
+  /* Test matrix tab */
+  .summary { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-bottom: 14px; }
+  .summary .stat { font-size: 13px; color: var(--muted); }
+  .summary .stat b { font-size: 18px; color: var(--text); margin-right: 4px; font-variant-numeric: tabular-nums; }
+  .summary .stat.ok b { color: var(--pass); } .summary .stat.bad b { color: var(--fail); }
+  .progress { height: 4px; background: var(--panel-2); border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
+  .progress div { height: 100%; background: var(--pass); width: 0; transition: width .2s; }
+  .progress.failed div { background: var(--fail); }
+
+  .matrix-wrap { overflow-x: auto; }
+  table.matrix { border-collapse: separate; border-spacing: 0; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+  .matrix th, .matrix td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+  .matrix tr:last-child th, .matrix tr:last-child td { border-bottom: 0; }
+  .matrix thead th { font-size: 12px; color: var(--faint); font-weight: 550; }
+  .matrix tbody th { font-family: var(--mono); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .cells { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cell {
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel-2);
+    border-radius: 6px; padding: 4px 9px; font-family: var(--mono); font-size: 12px;
+  }
+  .cell::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .cell.pass { background: var(--pass-soft); border-color: transparent; } .cell.pass::before { background: var(--pass); }
+  .cell.fail { background: var(--fail-soft); border-color: transparent; } .cell.fail::before { background: var(--fail); }
+  .cell.running { background: var(--run-soft); border-color: transparent; }
+  .cell.running::before { background: var(--run); animation: pulse 1s infinite; }
+  .cell[aria-current="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .cell small { color: var(--faint); }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  .detail { margin-top: 16px; }
+  .detail h3 { margin: 0 0 6px; font-size: 15px; }
+  .detail h3 code { font-size: 14px; }
+  .expect { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+
+  .empty { color: var(--faint); text-align: center; padding: 40px 0; }
+
+  @media (max-width: 760px) {
+    .demos { grid-template-columns: 1fr; }
+    .bar, main, nav.tabs { padding-inline: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">TestDeliverd <small id="sdk"></small></div>
+    <div class="chips" id="chips"></div>
+    <div class="mode">
+      <span class="mode-label">Mode</span>
+      <div class="segmented" role="group" aria-label="Mode">
+        <button type="button" data-mode="development">Development</button>
+        <button type="button" data-mode="live" class="live">Live</button>
+      </div>
+    </div>
+  </div>
+  <div class="banner" id="banner" hidden>
+    <div class="bar">
+      <strong>Live mode.</strong> Demos call your real Deliverd organisation: approvers get real emails and
+      published reports are real. Each live run asks you to confirm first. Tests always run in development mode.
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="demos" aria-selected="true">Demos</button>
+    <button type="button" role="tab" data-tab="tests" aria-selected="false">Test matrix <span class="count" id="test-count"></span></button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-demos">
+    <div class="demos">
+      <div class="list" id="demo-list"></div>
+      <div class="panel" id="demo-panel"></div>
+    </div>
+  </section>
+
+  <section id="tab-tests" hidden>
+    <div class="summary">
+      <button type="button" class="btn primary" id="run-all">Run all tests</button>
+      <span class="stat ok"><b id="n-pass">0</b>passed</span>
+      <span class="stat bad"><b id="n-fail">0</b>failed</span>
+      <span class="stat"><b id="n-total">0</b>cases</span>
+      <span class="stat" id="elapsed"></span>
+      <span class="spacer"></span>
+      <span class="stat">Development mode only: the same cases as <code>npm test</code></span>
+    </div>
+    <div class="progress" id="progress"><div></div></div>
+    <div class="matrix-wrap"><table class="matrix" id="matrix"></table></div>
+    <div class="panel detail" id="test-detail" hidden></div>
+  </section>
+</main>
+
+<script>
+const $ = (selector, root = document) => root.querySelector(selector);
+const esc = (text) => String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const seconds = (ms) => `${(ms / 1000).toFixed(1)}s`;
+
+const state = {
+  status: null,
+  mode: "development",
+  demos: [],
+  selected: null,
+  outcome: {},          // demo name -> chosen outcome
+  run: null,            // { controller, output, code, ms, error, demo, mode }
+  armed: false,         // live run waiting for its confirming click
+  cases: [],
+  results: [],          // per case: { state: "idle" | "running" | "pass" | "fail", output, code, ms }
+  openCase: null,
+  suiteStarted: 0,
+  suiteMs: 0,
+};
+
+const store = {
+  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+  set(key, value) { try { localStorage.setItem(key, value); } catch {} },
+};
+
+async function getJson(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  return res.json();
+}
+async function postJson(path, body, signal) {
+  return fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal });
+}
+
+/* ---------- Header and mode ---------- */
+
+function renderHeader() {
+  const { status, mode } = state;
+  $("#sdk").textContent = `@deliverd/sdk ${status.sdkVersion}`;
+  const chips = [
+    status.hasKey ? ["ok", "API key set"] : ["warn", "No API key in .env"],
+    status.approver ? ["", `Approver: ${status.approver}`] : ["", "Approver: owners and admins"],
+    status.reportId ? ["", `Report: ${status.reportId}`] : null,
+    ["", `.env default: ${status.defaultMode}`],
+  ].filter(Boolean);
+  $("#chips").innerHTML = chips.map(([cls, text]) => `<span class="chip ${cls}">${esc(text)}</span>`).join("");
+
+  for (const button of document.querySelectorAll("[data-mode]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
+  }
+  const liveButton = $('[data-mode="live"]');
+  liveButton.disabled = !status.hasKey;
+  liveButton.title = status.hasKey ? "" : "Set DELIVERD_API_KEY in .env to enable live mode";
+  document.body.classList.toggle("live", mode === "live");
+  $("#banner").hidden = mode !== "live";
+}
+
+function setMode(mode) {
+  if (mode === "live" && !state.status.hasKey) return;
+  state.mode = mode;
+  state.armed = false;
+  store.set("mode", mode);
+  renderHeader();
+  renderDemoPanel();
+}
+
+/* ---------- Demos tab ---------- */
+
+const devLabel = { yes: "dev", offline: "offline", no: "live only" };
+
+function renderDemoList() {
+  $("#demo-list").innerHTML = state.demos.map((demo) => `
+    <button type="button" class="item" data-demo="${esc(demo.name)}" aria-current="${demo.name === state.selected}">
+      <span class="name">${esc(demo.name)}</span>
+      <span class="badge ${demo.dev}">${devLabel[demo.dev]}</span>
+      <span class="title">${esc(demo.title)}</span>
+    </button>`).join("");
+}
+
+function selectDemo(name) {
+  if (state.run?.controller && state.run.demo !== name) return; // finish or stop the current run first
+  state.selected = name;
+  state.armed = false;
+  if (state.run && state.run.demo !== name) state.run = null;
+  store.set("demo", name);
+  renderDemoList();
+  renderDemoPanel();
+}
+
+function renderDemoPanel() {
+  const demo = state.demos.find((d) => d.name === state.selected);
+  if (!demo) { $("#demo-panel").innerHTML = `<p class="empty">Choose a demo.</p>`; return; }
+  const live = state.mode === "live";
+  const running = Boolean(state.run?.controller);
+  const outcome = state.outcome[demo.name] ?? demo.outcomes[0];
+
+  let note = "";
+  if (!live && demo.dev === "no") note = `<p class="note warn">Development mode doesn't simulate this demo, so it will only explain that it needs a live key. Switch to Live to run it for real.</p>`;
+  if (!live && demo.dev === "offline") note = `<p class="note">Runs entirely offline, so the outcome setting doesn't apply.</p>`;
+  if (live && demo.liveEffect) note = `<p class="note warn"><strong>Live run:</strong> ${esc(demo.liveEffect)}</p>`;
+  if (live && !demo.liveEffect) note = `<p class="note">Runs offline even in live mode: nothing is sent to Deliverd.</p>`;
+
+  const outcomes = !live && demo.outcomes.length ? `
+    <span class="label">Imaginary approver</span>
+    <div class="pills">${demo.outcomes.map((o) => `
+      <button type="button" class="pill" data-outcome="${esc(o)}" aria-pressed="${o === outcome}" ${running ? "disabled" : ""}>${esc(o)}</button>`).join("")}
+    </div>` : "";
+
+  const runLabel = live
+    ? (state.armed ? "Confirm: run live" : "Run live…")
+    : "Run";
+
+  $("#demo-panel").innerHTML = `
+    <h2>${esc(demo.title)}<code>${esc(demo.name)}</code></h2>
+    <p class="shows">${esc(demo.shows)}</p>
+    <dl class="facts">
+      <dt>Development</dt><dd>${{ yes: "Simulated by the SDK", offline: "Offline: no API calls in either mode", no: "Not simulated (501)" }[demo.dev]}</dd>
+      <dt>Live needs</dt><dd>${esc(demo.liveNeeds)}</dd>
+      <dt>Source</dt><dd><code>src/demos/${esc(demo.name)}.ts</code></dd>
+    </dl>
+    ${note}
+    <div class="controls">
+      ${outcomes}
+      <span class="spacer"></span>
+      ${running
+        ? `<button type="button" class="btn" id="stop">Stop</button>`
+        : `<button type="button" class="btn primary ${state.armed ? "armed" : ""}" id="run">${runLabel}</button>`}
+    </div>
+    <pre class="console" id="console"></pre>
+    <div class="status-line" id="run-status"></div>`;
+  renderConsole();
+}
+
+function renderConsole() {
+  const out = $("#console");
+  if (!out) return;
+  const run = state.run;
+  if (!run) {
+    out.innerHTML = `<span class="faint">Output appears here. Equivalent command:\n` +
+      esc(commandFor(state.selected)) + `</span>`;
+    $("#run-status").innerHTML = "";
+    return;
+  }
+  out.textContent = run.output;
+  out.scrollTop = out.scrollHeight;
+  const where = run.mode === "live" ? "live" : `development${run.outcome ? `, ${run.outcome}` : ""}`;
+  let status;
+  if (run.error) status = `<span class="bad">${esc(run.error)}</span>`;
+  else if (run.controller) status = `<span class="running">Running (${esc(where)})…</span>`;
+  else if (run.stopped) status = `<span class="bad">Stopped</span>`;
+  else status = `<span class="${run.code === 0 ? "ok" : "bad"}">Exit ${run.code}</span><span>${seconds(run.ms)}</span><span>${esc(where)}</span>`;
+  $("#run-status").innerHTML = status;
+}
+
+function commandFor(name) {
+  const demo = state.demos.find((d) => d.name === name);
+  if (state.mode === "live") return `DELIVERD_MODE=live npm run demo ${name}`;
+  const outcome = state.outcome[name] ?? demo?.outcomes[0];
+  return `${outcome ? `DELIVERD_DEV_OUTCOME=${outcome} ` : ""}npm run demo ${name}`;
+}
+
+async function runSelected() {
+  const demo = state.demos.find((d) => d.name === state.selected);
+  const live = state.mode === "live";
+  // A live run that does something real takes two clicks.
+  if (live && demo.liveEffect && !state.armed) { state.armed = true; renderDemoPanel(); return; }
+  state.armed = false;
+
+  const outcome = live ? undefined : (state.outcome[demo.name] ?? demo.outcomes[0]);
+  const controller = new AbortController();
+  state.run = { controller, output: "", demo: demo.name, mode: state.mode, outcome };
+  renderDemoPanel();
+
+  try {
+    const res = await postJson("/api/run", { demo: demo.name, mode: state.mode, outcome, confirmLive: live }, controller.signal);
+    if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`);
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += value;
+      let newline;
+      while ((newline = buffer.indexOf("\n")) >= 0) {
+        const event = JSON.parse(buffer.slice(0, newline));
+        buffer = buffer.slice(newline + 1);
+        if (event.type === "output") state.run.output += event.text;
+        if (event.type === "exit") Object.assign(state.run, { code: event.code, ms: event.ms });
+        renderConsole();
+      }
+    }
+  } catch (error) {
+    if (error.name === "AbortError") state.run.stopped = true;
+    else state.run.error = error.message;
+  }
+  state.run.controller = null;
+  renderDemoPanel();
+}
+
+/* ---------- Test matrix tab ---------- */
+
+function renderMatrix() {
+  const byDemo = new Map();
+  state.cases.forEach((c, index) => {
+    if (!byDemo.has(c.demo)) byDemo.set(c.demo, []);
+    byDemo.get(c.demo).push(index);
+  });
+  $("#matrix").innerHTML = `
+    <thead><tr><th>Demo</th><th>Cases (imaginary approver's outcome)</th></tr></thead>
+    <tbody>${[...byDemo].map(([demo, indexes]) => `
+      <tr><th>${esc(demo)}</th><td><div class="cells">${indexes.map((i) => {
+        const r = state.results[i];
+        // Only simulated demos have an approver; the rest just run.
+        const label = state.demos.find((d) => d.name === demo)?.dev === "yes" ? state.cases[i].outcome : "run";
+        const time = r.ms != null && r.state !== "running" ? ` <small>${seconds(r.ms)}</small>` : "";
+        return `<button type="button" class="cell ${r.state}" data-case="${i}" aria-current="${i === state.openCase}"
+          title="${esc(`${r.state}: expects "${state.cases[i].expect}"`)}">${esc(label)}${time}</button>`;
+      }).join("")}</div></td></tr>`).join("")}
+    </tbody>`;
+
+  const pass = state.results.filter((r) => r.state === "pass").length;
+  const fail = state.results.filter((r) => r.state === "fail").length;
+  const running = state.results.some((r) => r.state === "running");
+  $("#n-pass").textContent = pass;
+  $("#n-fail").textContent = fail;
+  $("#n-total").textContent = state.cases.length;
+  $("#test-count").textContent = fail ? `${fail} failing` : pass === state.cases.length ? "all passing" : "";
+  $("#elapsed").textContent = state.suiteMs ? `in ${seconds(state.suiteMs)}` : "";
+  $("#progress div").style.width = `${((pass + fail) / state.cases.length) * 100}%`;
+  $("#progress").classList.toggle("failed", fail > 0);
+  $("#run-all").disabled = running;
+  $("#run-all").textContent = running ? "Running…" : "Run all tests";
+  renderTestDetail();
+}
+
+function renderTestDetail() {
+  const i = state.openCase;
+  const panel = $("#test-detail");
+  if (i == null) { panel.hidden = true; return; }
+  const c = state.cases[i], r = state.results[i];
+  panel.hidden = false;
+  const verdict = { idle: "Not run yet", running: `<span class="running">Running…</span>`,
+    pass: `<span class="ok">Passed</span>`, fail: `<span class="bad">Failed</span>` }[r.state];
+  // Highlight the expected text, so a failure shows what was missing.
+  let body = r.output ? esc(r.output) : `<span class="faint">No output yet.</span>`;
+  if (r.output) body = body.split(esc(c.expect)).join(`<mark>${esc(c.expect)}</mark>`);
+  panel.innerHTML = `
+    <div class="controls">
+      <h3><code>${esc(c.demo)}</code>${state.demos.find((d) => d.name === c.demo)?.dev === "yes" ? ` with <code>${esc(c.outcome)}</code>` : ""}</h3>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="run-one" ${r.state === "running" ? "disabled" : ""}>Run this case</button>
+    </div>
+    <div class="expect">${verdict} · expects exit ${c.exitCode ?? 0} and output containing <code>${esc(c.expect)}</code>
+      ${r.code != null && r.state !== "running" ? ` · got exit ${r.code}` : ""}</div>
+    <pre class="console">${body}</pre>`;
+}
+
+async function runCase(i) {
+  state.results[i] = { state: "running" };
+  renderMatrix();
+  try {
+    const res = await postJson("/api/test", { index: i });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error);
+    state.results[i] = { state: body.pass ? "pass" : "fail", output: body.output, code: body.code, ms: body.ms };
+  } catch (error) {
+    state.results[i] = { state: "fail", output: `Couldn't run: ${error.message}` };
+  }
+  renderMatrix();
+}
+
+async function runAll() {
+  state.results = state.cases.map(() => ({ state: "idle" }));
+  state.suiteStarted = Date.now();
+  state.suiteMs = 0;
+  renderMatrix();
+  const queue = state.cases.map((_, i) => i);
+  // Four at a time: each case is a separate Node process.
+  await Promise.all(Array.from({ length: 4 }, async () => {
+    while (queue.length) await runCase(queue.shift());
+  }));
+  state.suiteMs = Date.now() - state.suiteStarted;
+  renderMatrix();
+}
+
+/* ---------- Wiring ---------- */
+
+function showTab(tab) {
+  for (const button of document.querySelectorAll("[data-tab]")) button.setAttribute("aria-selected", String(button.dataset.tab === tab));
+  $("#tab-demos").hidden = tab !== "demos";
+  $("#tab-tests").hidden = tab !== "tests";
+  store.set("tab", tab);
+}
+
+document.addEventListener("click", (event) => {
+  const target = event.target.closest("button");
+  if (!target || target.disabled) return;
+  if (target.dataset.mode) return setMode(target.dataset.mode);
+  if (target.dataset.tab) return showTab(target.dataset.tab);
+  if (target.dataset.demo) return selectDemo(target.dataset.demo);
+  if (target.dataset.outcome) {
+    state.outcome[state.selected] = target.dataset.outcome;
+    state.run = null;
+    return renderDemoPanel();
+  }
+  if (target.dataset.case) { state.openCase = Number(target.dataset.case); return renderMatrix(); }
+  if (target.id === "run") return runSelected();
+  if (target.id === "stop") return state.run?.controller?.abort();
+  if (target.id === "run-all") return runAll();
+  if (target.id === "run-one") return runCase(state.openCase);
+});
+
+// Leaving a live run armed is a trap: Escape disarms it.
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.armed) { state.armed = false; renderDemoPanel(); }
+});
+
+(async function init() {
+  try {
+    const [status, demos, cases] = await Promise.all([getJson("/api/status"), getJson("/api/demos"), getJson("/api/cases")]);
+    Object.assign(state, { status, demos, cases, results: cases.map(() => ({ state: "idle" })) });
+  } catch (error) {
+    document.querySelector("main").innerHTML = `<p class="empty">Couldn't reach the UI server: ${esc(error.message)}. Is <code>npm run ui</code> running?</p>`;
+    return;
+  }
+  // Start in the .env mode, or the last one chosen here; never live without a key.
+  const saved = store.get("mode");
+  state.mode = (saved === "live" || saved === "development" ? saved : state.status.defaultMode);
+  if (state.mode === "live" && !state.status.hasKey) state.mode = "development";
+  state.selected = state.demos.some((d) => d.name === store.get("demo")) ? store.get("demo") : state.demos[0]?.name;
+  renderHeader();
+  renderDemoList();
+  renderDemoPanel();
+  renderMatrix();
+  showTab(store.get("tab") === "tests" ? "tests" : "demos");
+})();
+</script>
+</body>
+</html>

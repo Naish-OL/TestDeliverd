@@ -12,13 +12,15 @@ Read `docs/sdk-notes.md` before writing SDK code. If you need an API detail it d
 - `npm run demo <name>`: run `src/demos/<name>.ts` (`src/demo.ts` loads `.env` first; shell variables win)
 - `npm run typecheck`: run after every change
 - `npm test`
+- `npm run ui`: local UI at http://localhost:4321 (restart it after changing server code)
+- `npm run test:ui`: Playwright end-to-end tests for the UI. After changing anything in `src/ui/`, run this rather than taking screenshots; add a spec for new UI behaviour. Never remove `UI_DEV_ONLY` from `playwright.config.ts`, and mock `/api/run` in any test that uses Live mode.
 
 ## Conventions
 
 - One self-contained file per feature in `src/demos/`. Start each with a short comment: what it shows, the docs URL it follows, and which `DELIVERD_DEV_OUTCOME` values are worth trying.
 - Create the client in `src/client.ts`. Demos import it rather than constructing their own, unless a demo is specifically about client options.
 - Every demo must run in development mode (`DELIVERD_MODE=development`) when the feature supports it. If it needs a real key or a particular plan, say so in the header comment and fail with a clear message rather than a stack trace.
-- When you add a demo, update the Demos table in `README.md`.
+- When you add a demo, update the Demos table in `README.md`, its entry in `src/catalogue.ts`, and its cases in `test/cases.ts`.
 - Tests run in development mode only. Never call the live API from tests.
 
 ## SDK rules (from the docs; easy to get wrong)

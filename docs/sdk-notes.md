@@ -1,6 +1,6 @@
 # Deliverd SDK notes
 
-Condensed from https://deliverd.dev/docs/developers and its subpages. **Last checked: 2026-10-14.** Where these notes and the live docs disagree, the docs win; update this file.
+Condensed from https://deliverd.dev/docs/developers and its subpages. **Last checked: 2026-10-15.** Where these notes and the live docs disagree, the docs win; update this file.
 
 ## Package
 
@@ -26,7 +26,7 @@ Development mode (checked in SDK 0.25.0 source) simulates approvals, reviews, co
 
 ## approve(options) → decision
 
-Options: `title` (required, ≤200 chars), `description`, `risk` (`low`|`medium`|`high`|`critical`, default `medium`), `approvers` (names, emails or groups, ≤20; default: org owners and admins), `externalId`, `reuse` (default true), `input`, `editableFields`, `expiresIn` (`"30m"`, `"4h"`, `"2d"`; default 1 day) or `expiresAt`, `timeout`, `onQuestion(q: { id, question, answer, askedAt, answeredAt }) => string | null`, `onPoll`, `signal`, `callbackUrl` (returns immediately). The REST API also accepts `factors`, `links`, `reportId`, `flowId` and `metadata`.
+Options: `title` (required, ≤200 chars), `description`, `risk` (`low`|`medium`|`high`|`critical`, default `medium`), `approvers` (names, emails or groups, ≤20; default: org owners and admins), `externalId`, `reuse` (default true), `input`, `editableFields`, `expiresIn` (`"30m"`, `"4h"`, `"2d"`; default 1 day) or `expiresAt`, `timeout`, `onQuestion(q: { id, question, answer, askedAt, answeredAt }) => string | null`, `onPoll`, `signal`, `callbackUrl`. In 0.25.0 `approve()` still waits when given a `callbackUrl` and drops the secret; for callbacks use `approvals.create()` (below). The REST API also accepts `factors`, `links`, `reportId`, `flowId` and `metadata`.
 
 Decision: `approved`, `status`, `decidedBy`, `decidedById`, `decidedAt`, `note`, `id`, `url`, `input` (null unless approved; **use this**), `changes: { field, from, to }[]`, `approval` (the raw request).
 
@@ -50,6 +50,9 @@ Statuses: `pending`, `approved`, `rejected`, `changes_requested`, `expired`, `ca
 
 - `constructEvent(signingSecret, rawBody, signatureHeader)` and `constructCallback(callbackSecret, rawBody, signature)` return the envelope or throw. Timestamp tolerance is 5 minutes.
 - Headers: `Deliverd-Event`, `Deliverd-Delivery` (use it to drop duplicates), `Deliverd-Signature: t=…,v1=…` (HMAC-SHA256 over `<t>.<raw body>`).
+- Callbacks: pass `callbackUrl` to `approvals.create()` (also reviews, collections, gates). The secret is per request and only on that response: `handle.callbackSecret`. `approvals.get(id)` re-reads the request (`approvedInput`, `changes`, `openQuestions`); `handle.answer(questionId, text)` answers a question.
+- Callback events (approval): `approval.approved`, `.rejected`, `.changes_requested`, `.expired`, `.question` (nobody decides until you answer). Retries: 5 attempts, 1, 4, 16 and 64 minutes apart. The docs don't list the fields of `data` (the same object the organisation's webhook carries).
+- Development mode never POSTs callbacks and returns no `callbackSecret`; it does serve `approvals.get`, answers and cancel.
 - Envelope: `{ event, sentAt, data }`; callbacks add `requestType` and `requestId`; test sends add `test: true`.
 - Respond 2xx within 10 s. Endpoints must be public HTTPS; loopback and private addresses are refused.
 - Events: `approval.*` (requested, approved, rejected, expired, escalated, question, answered, changes_requested), `review.*`, `collection.requested|completed`, `flow.completed`, `gate.*` (denied by default; others opt-in), `task.*`, `report.*`, `comment.created`, `access.requested`, `schedule.due`, `publish.held`.

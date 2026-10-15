@@ -45,6 +45,20 @@ Deliverd never lets you approve your own request. With a personal key, a request
 
 Personal keys carry every scope your role has. Agent keys (Admin → Agents) are narrower: they can't register actions, manage policy or webhooks, or decide anything.
 
+## UI
+
+```bash
+npm run ui    # http://localhost:4321
+```
+
+A local page for running the demos and the test matrix:
+
+- **Mode switch:** Development or Live. It applies to runs from the page only and doesn't edit `.env`. Live needs `DELIVERD_API_KEY`; any live run that contacts people or writes data takes a second, confirming click (Escape cancels).
+- **Demos tab:** pick a demo and the imaginary approver's outcome, then watch the output stream in.
+- **Test matrix:** runs the same cases as `npm test` (`test/cases.ts`), always in development mode. Click a case to see its output with the expected text highlighted.
+
+The server listens on 127.0.0.1 only and refuses cross-origin requests. Set `UI_PORT` to change the port.
+
 ## Demos
 
 Run any of these with `npm run demo <name>`. "Outcomes" are the `DELIVERD_DEV_OUTCOME` values worth trying.
@@ -53,6 +67,7 @@ Run any of these with `npm run demo <name>`. "Outcomes" are the `DELIVERD_DEV_OU
 |---|---|---|---|---|
 | `approve` | `deliverd.approve()`, `onQuestion`, timeouts | Yes | `approved` `rejected` `question` `timeout` | An approver who isn't the key's owner |
 | `approve-with-changes` | `editableFields`, acting on `decision.input`, `decision.changes` | Yes | `approved` `rejected` | Same |
+| `approve-callback` | `approvals.create()` with `callbackUrl`, `constructCallback()`: hear the answer without polling | Yes (simulated callbacks) | `approved` `rejected` `question` `timeout` | `DEMO_CALLBACK_URL`: a public HTTPS tunnel (e.g. `ngrok http 4567`) to `PORT`; an approver who isn't the key's owner |
 | `confirm` | `deliverd.confirm()`: a quick yes/no | Yes | `approved` `rejected` | Same |
 | `collect` | `deliverd.collect()`: typed questions, checking `complete` | Yes | `approved` `rejected` `timeout` | Named respondents (`DEMO_APPROVER`) |
 | `review` | `deliverd.review()`: verdicts and comment threads | Yes | `approved` `rejected` | `DEMO_REPORT_ID` from the `publish` demo |
@@ -70,8 +85,10 @@ Development mode simulates approvals, reviews, collections, flows, tasks and the
 | Script | Purpose |
 |---|---|
 | `npm run demo <name>` | Run a demo with `tsx` |
+| `npm run ui` | Local UI for demos and tests |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | `vitest`: runs every demo in development mode and checks its output |
+| `npm run test:ui` | Playwright: drives the UI end to end in your installed Chrome. Live runs are mocked and the server refuses them (`UI_DEV_ONLY`) |
 
 ## Layout
 
@@ -79,9 +96,15 @@ Development mode simulates approvals, reviews, collections, flows, tasks and the
 src/
   demo.ts          loads .env, then runs src/demos/<name>.ts
   client.ts        shared Deliverd client setup
+  catalogue.ts     what each demo shows and does live (used by the UI)
+  runner.ts        runs a demo in its own process (used by tests and the UI)
+  ui/              local UI: server.ts and index.html
   demos/<name>.ts  one self-contained demo per SDK feature
 test/
+  cases.ts         test cases shared by vitest and the UI
   demos.test.ts    smoke tests for every demo (development mode only)
+e2e/
+  ui.spec.ts       Playwright tests for the UI
 docs/
   sdk-notes.md     condensed SDK reference (with a last-checked date)
 .env.example       environment variables
